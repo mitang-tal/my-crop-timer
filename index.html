@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>农作物计时器 - iPhone版</title>
+    <title>农作物计时器 - iPhone版（优化版）</title>
     <style>
         * {
             margin: 0;
@@ -249,16 +249,21 @@
             font-size: 1.05rem;
         }
         
-        .range-slider {
-            width: 100%;
-            margin: 15px 0;
+        .input-field:focus {
+            outline: none;
+            border-color: #3498db;
         }
         
-        .interval-display {
-            text-align: center;
-            font-size: 1.1rem;
-            margin-top: 10px;
-            color: #3498db;
+        .interval-input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .interval-unit {
+            white-space: nowrap;
+            font-size: 1rem;
+            color: #aaa;
         }
         
         .no-resources {
@@ -313,9 +318,18 @@
                 </div>
                 
                 <div class="input-group">
-                    <label class="input-label">生长周期(分钟):</label>
-                    <input type="range" id="crop-interval" class="range-slider" min="1" max="600" value="60">
-                    <div class="interval-display">60 分钟</div>
+                    <label class="input-label">生长周期:</label>
+                    <div class="interval-input-container">
+                        <input 
+                            type="number" 
+                            id="crop-interval" 
+                            class="input-field" 
+                            placeholder="分钟数"
+                            min="1"
+                            max="600"
+                            value="60">
+                        <div class="interval-unit">分钟</div>
+                    </div>
                 </div>
             </div>
             <div class="dialog-footer">
@@ -354,7 +368,7 @@
             // DOM元素
             const resourceGrid = document.getElementById('resource-grid');
             const statusEl = document.getElementById('status');
-            const cropIntervalSlider = document.getElementById('crop-interval');
+            const cropIntervalInput = document.getElementById('crop-interval');
             const cropSelect = document.getElementById('crop-select');
             
             // 对话框
@@ -367,8 +381,7 @@
             // 按钮事件监听
             document.getElementById('btn-add').addEventListener('click', () => {
                 document.getElementById('crop-name').value = '';
-                cropIntervalSlider.value = 60;
-                document.querySelector('.interval-display').textContent = '60 分钟';
+                cropIntervalInput.value = '60';
                 showDialog(addDialog);
             });
             
@@ -381,12 +394,6 @@
             
             document.querySelectorAll('.dialog-btn.cancel').forEach(btn => {
                 btn.addEventListener('click', () => closeAllDialogs());
-            });
-            
-            // 更新区间显示
-            cropIntervalSlider.addEventListener('input', () => {
-                document.querySelector('.interval-display').textContent = 
-                    `${cropIntervalSlider.value} 分钟`;
             });
             
             // 加载配置
@@ -559,17 +566,20 @@
             // 添加新作物
             function addCrop() {
                 const name = document.getElementById('crop-name').value.trim();
-                const interval = parseInt(cropIntervalSlider.value) * 60; // 秒
+                const intervalMinutes = parseInt(cropIntervalInput.value); // 分钟数
                 
                 if (!name) {
                     statusEl.textContent = '状态: 请输入作物名称';
                     return;
                 }
                 
-                if (isNaN(interval) || interval <= 0) {
-                    statusEl.textContent = '状态: 无效的时间间隔';
+                if (isNaN(intervalMinutes) || intervalMinutes <= 0 || intervalMinutes > 600) {
+                    statusEl.textContent = '状态: 无效的时间间隔（1-600分钟）';
                     return;
                 }
+                
+                // 转换为秒
+                const interval = intervalMinutes * 60;
                 
                 // 创建ID
                 const id = name.toLowerCase().replace(/\s+/g, '_');
