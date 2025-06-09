@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>农作物计时器 - iPhone版</title>
+    <style>
+        /* Constants */
+        :root {
+            --bg-color-dark: #1a1a1a;
+            --bg-color-medium: rgba(30, 30, 30, 0.95);
+            --card-bg-color: rgba(45, 45, 45, 0.9);
+            --text-color-light: #f0f0f0;
+            --text-color-medium: #888;
+            --primary-color: #4CAF50; /* Green */
+            --accent-color: #3498db; /* Blue */
+            --danger-color: #e74c3c; /* Red */
+            --warning-color: #f39c12; /* Orange */
+            --purple-color: #9b59b6; /* Purple */
+            --border-color: #333;
+            --border-color-card: #444;
+            --dialog-bg: rgba(35, 35, 35, 0.98);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        body {
+            background-color: var(--bg-color-dark);
+            color: var(--text-color-light);
+            min-height: 100vh;
+            padding-bottom: env(safe-area-inset-bottom);
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            background: var(--bg-color-medium);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px); /* For Safari */
+            z-index: 10;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+            letter-spacing: 0.5px;
+        }
+        
+        .subtitle {
+            color: var(--text-color-medium);
+            font-size: 0.9rem;
+        }
+        
+        .status-bar {
+            background: var(--card-bg-color);
+            padding: 12px 15px;
+            border-radius: 14px;
+            margin: 20px 0;
+            font-size: 0.95rem;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+        
+        .resource-grid {
+            display: grid;
+            /* Adaptive columns: 1 column on small screens, 2 columns on medium, up to 3 on larger */
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .resource-card {
+            background: var(--card-bg-color);
+            border-radius: 16px;
+            padding: 20px 15px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px); /* For Safari */
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color-card);
+            user-select: none; /* Prevent text selection on long press */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        
+        .resource-card.mature {
+            animation: pulse 1.5s infinite;
+            border-color: var(--danger-color);
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(231, 76, 60, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        }
+        
+        .resource-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: var(--accent-color);
+        }
+        
+        .timer {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 15px 0;
+            font-variant-numeric: tabular-nums;
+            padding: 8px 0;
+        }
+        
+        .mature .timer {
+            color: var(--danger-color);
+        }
+        
+        .btn-harvest {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s, transform 0.1s;
+        }
+        
+        .btn-harvest:active {
+            background: #219d54;
+            transform: scale(0.98);
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 25px;
+            padding-bottom: calc(25px + env(safe-area-inset-bottom));
+        }
+        
+        .control-btn {
+            padding: 16px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 600;
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-add {
+            background: var(--primary-color);
+            grid-column: span 2;
+        }
+        
+        .btn-remove {
+            background: var(--danger-color);
+        }
+        
+        .btn-alert {
+            background: var(--warning-color);
+        }
+        
+        .btn-alert.enabled {
+            background: var(--warning-color);
+        }
+
+        .btn-alert.disabled {
+            background: #777;
+        }
+        
+        .btn-save {
+            background: var(--accent-color);
+        }
+        
+        /* Dialog styles */
+        .dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .dialog.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .dialog-content {
+            background: var(--dialog-bg);
+            width: 100%;
+            max-width: 400px;
+            border-radius: 18px;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); /* For Safari */
+            border: 1px solid var(--border-color-card);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .dialog.active .dialog-content {
+            transform: translateY(0);
+        }
+        
+        .dialog-header {
+            padding: 22px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.3rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--primary-color);
+        }
+        
+        .dialog-body {
+            padding: 0 22px 22px;
+        }
+        
+        .dialog-footer {
+            display: flex;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .dialog-btn {
+            flex: 1;
+            padding: 18px;
+            background: transparent;
+            border: none;
+            color: var(--accent-color);
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        
+        .dialog-btn:active {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(0.98);
+        }
+        
+        .dialog-btn.cancel {
+            color: var(--text-color-medium);
+            border-right: 1px solid var(--border-color);
+        }
+        
+        .input-group {
+            margin-top: 22px;
+            margin-bottom: 0;
+        }
+        
+        .input-label {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 1rem;
+            color: var(--text-color-light);
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(60, 60, 60, 0.5);
+            border: 1px solid var(--border-color-card);
+            border-radius: 14px;
+            color: var(--text-color-light);
+            font-size: 1.05rem;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            outline: none; /* Remove blue outline on focus */
+        }
+
+        .input-field:focus {
+            border-color: var(--accent-color); /* Highlight on focus */
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.5); /* Blue glow */
+        }
+
+        .input-field::placeholder {
+            color: rgba(255,255,255,0.4);
+        }
+        
+        /* Removed range slider specific styles */
+        
+        .interval-display {
+            text-align: center;
+            font-size: 1.1rem;
+            margin-top: 10px;
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+        
+        .no-resources {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px 20px;
+            font-size: 1.1rem;
+            color: var(--text-color-medium);
+        }
+        
+        /* Mobile optimization */
+        @media (max-width: 480px) {
+            .resource-grid {
+                grid-template-columns: 1fr; /* Single column on small phones */
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-add {
+                grid-column: span 1;
+            }
+        }
+        @media (min-width: 600px) { /* Tablet/Larger phone */
+            .resource-grid {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            }
+        }
+        @media (min-width: 900px) { /* Desktop/Larger tablet */
+            .resource-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>农作物计时器</h1>
+            <div class="subtitle">iPhone专版</div>
+        </div>
+        
+        <div class="status-bar" id="status">状态: 已启动</div>
+        
+        <div class="resource-grid" id="resource-grid">
+            <div class="no-resources">没有作物，请添加农作物</div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn btn-add" id="btn-add">添加作物</button>
+            <button class="control-btn btn-remove" id="btn-remove">删除作物</button>
+            <button class="control-btn btn-alert" id="btn-alert">🔔 提示音 <span id="alert-status">(开)</span></button>
+            <button class="control-btn btn-save" id="btn-save">保存状态</button>
+        </div>
+    </div>
+    
+    <div class="dialog" id="add-dialog">
+        <div class="dialog-content">
+            <div class="dialog-header">添加新作物</div>
+            <div class="dialog-body">
+                <div class="input-group">
+                    <label for="crop-name" class="input-label">作物名称:</label>
+                    <input type="text" id="crop-name" class="input-field" placeholder="例如: 樱桃番茄">
+                </div>
+                
+                <div class="input-group">
+                    <label for="crop-interval" class="input-label">生长周期 (分钟):</label>
+                    <input type="number" id="crop-interval" class="input-field" min="1" max="1440" value="60" placeholder="请输入分钟数">
+                    <div class="interval-display" id="interval-display">60 分钟</div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="dialog-btn cancel">取消</button>
+                <button class="dialog-btn" id="confirm-add">确定</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="dialog" id="remove-dialog">
+        <div class="dialog-content">
+            <div class="dialog-header">删除作物</div>
+            <div class="dialog-body">
+                <div class="input-group">
+                    <label for="crop-select" class="input-label">选择要删除的作物:</label>
+                    <select id="crop-select" class="input-field">
+                        </select>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="dialog-btn cancel">取消</button>
+                <button class="dialog-btn" id="confirm-remove">确定</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        'use strict';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Constants ---
+            const STORAGE_KEY = 'farm_timer_config_v3'; // Updated key for new features
+            const DEFAULT_INTERVAL_MINS = 60;
+            const DEFAULT_RESOURCES = {
+                'initial_ice': { name: "冰块", interval: 180, nextTime: null },
+                'initial_milk': { name: "牛奶", interval: 240, nextTime: null },
+                'initial_sugarcane': { name: "甘蔗", interval: 900, nextTime: null }
+            };
+            const SOUND_FREQUENCY = 880; // Hz
+            const SOUND_DURATION = 0.2; // seconds
+            const UPDATE_INTERVAL_MS = 1000; // 1 second
+            const LONG_PRESS_THRESHOLD = 500; // ms for long press
+
+            // --- DOM Elements ---
+            const resourceGrid = document.getElementById('resource-grid');
+            const statusEl = document.getElementById('status');
+            const cropIntervalInput = document.getElementById('crop-interval'); // Changed to input
+            const intervalDisplay = document.getElementById('interval-display');
+            const cropSelect = document.getElementById('crop-select');
+            const alertStatusSpan = document.getElementById('alert-status');
+
+            // --- Dialogs ---
+            const addDialog = document.getElementById('add-dialog');
+            const removeDialog = document.getElementById('remove-dialog');
+
+            // --- State Variables ---
+            let alertsEnabled = true;
+            let resources = {};
+            let longPressTimer; // For long press
+            let preventClick = false; // To prevent click after long press
+
+            // --- Proxy for state management ---
+            // Any direct modification to 'resources' object will trigger UI update and config save
+            const resourcesProxy = new Proxy(resources, {
+                set(target, property, value) {
+                    target[property] = value;
+                    updateUI();
+                    saveConfig();
+                    return true;
+                },
+                deleteProperty(target, property) {
+                    delete target[property];
+                    updateUI();
+                    saveConfig();
+                    return true;
+                }
+            });
+
+            // --- Initialization ---
+            init();
+
+            // --- Event Listeners ---
+            document.getElementById('btn-add').addEventListener('click', () => {
+                document.getElementById('crop-name').value = '';
+                cropIntervalInput.value = DEFAULT_INTERVAL_MINS;
+                intervalDisplay.textContent = `${DEFAULT_INTERVAL_MINS} 分钟`;
+                showDialog(addDialog);
+            });
+            
+            document.getElementById('btn-remove').addEventListener('click', showRemoveDialog);
+            document.getElementById('btn-alert').addEventListener('click', toggleAlerts);
+            document.getElementById('btn-save').addEventListener('click', saveConfig);
+            
+            document.getElementById('confirm-add').addEventListener('click', addCrop);
+            document.getElementById('confirm-remove').addEventListener('click', confirmRemove);
+            
+            document.querySelectorAll('.dialog-btn.cancel').forEach(btn => {
+                btn.addEventListener('click', () => closeAllDialogs());
+            });
+            
+            // For number input, update display when value changes
+            cropIntervalInput.addEventListener('input', () => {
+                intervalDisplay.textContent = `${cropIntervalInput.value} 分钟`;
+            });
+
+            // Event delegation for harvest buttons and long press
+            resourceGrid.addEventListener('click', (e) => {
+                if (preventClick) {
+                    preventClick = false; // Reset flag
+                    return; // Prevent click event if it was a long press
+                }
+                if (e.target.classList.contains('btn-harvest')) {
+                    const card = e.target.closest('.resource-card');
+                    if (card) {
+                        const resourceId = card.dataset.id;
+                        resetTimer(resourceId);
+                    }
+                }
+            });
+
+            // Long press event listeners for resource cards
+            resourceGrid.addEventListener('touchstart', (e) => {
+                const card = e.target.closest('.resource-card');
+                if (card) {
+                    // Start timer for long press
+                    longPressTimer = setTimeout(() => {
+                        preventClick = true; // Set flag to prevent subsequent click
+                        showRemoveDialog(card.dataset.id); // Pass the ID of the long-pressed card
+                    }, LONG_PRESS_THRESHOLD);
+                }
+            }, { passive: true }); // Use passive to avoid blocking scrolling
+
+            resourceGrid.addEventListener('touchend', () => {
+                clearTimeout(longPressTimer);
+            });
+
+            resourceGrid.addEventListener('touchmove', () => {
+                clearTimeout(longPressTimer);
+            });
+
+            // Handle contextmenu (right-click on desktop) for long press like behavior
+            resourceGrid.addEventListener('contextmenu', (e) => {
+                const card = e.target.closest('.resource-card');
+                if (card) {
+                    e.preventDefault(); // Prevent default context menu
+                    showRemoveDialog(card.dataset.id);
+                }
+            });
+
+            // --- Functions ---
+
+            function init() {
+                loadConfig();
+                updateAlertButtonState();
+                requestNotificationPermission();
+                startTimers();
+            }
+
+            function loadConfig() {
+                const savedConfig = localStorage.getItem(STORAGE_KEY);
+                if (savedConfig) {
+                    try {
+                        const config = JSON.parse(savedConfig);
+                        Object.assign(resourcesProxy, config.resources || {});
+                        alertsEnabled = config.alertsEnabled !== undefined ? config.alertsEnabled : true;
+                        
+                        for (const id in resourcesProxy) {
+                            if (resourcesProxy[id].nextTime) {
+                                resourcesProxy[id].nextTime = new Date(resourcesProxy[id].nextTime);
+                            } else {
+                                resourcesProxy[id].nextTime = new Date(Date.now() + resourcesProxy[id].interval * 1000);
+                                resourcesProxy[id].mature = false;
+                            }
+                        }
+                        statusEl.textContent = '状态: 配置已加载';
+                    } catch (e) {
+                        console.error('加载配置错误', e);
+                        statusEl.textContent = '状态: 配置加载失败，已使用默认配置';
+                        setInitialDefaultResources();
+                    }
+                } else {
+                    setInitialDefaultResources();
+                    statusEl.textContent = '状态: 未发现配置，已使用默认配置';
+                }
+                updateUI();
+            }
+
+            function setInitialDefaultResources() {
+                const now = Date.now();
+                // Clear existing resources before setting defaults to avoid duplication
+                for (const id in resourcesProxy) {
+                    delete resourcesProxy[id];
+                }
+                for (const id in DEFAULT_RESOURCES) {
+                    resourcesProxy[id] = {
+                        ...DEFAULT_RESOURCES[id],
+                        nextTime: new Date(now + DEFAULT_RESOURCES[id].interval * 1000),
+                        mature: false
+                    };
+                }
+                // Proxy setter already calls saveConfig and updateUI
+            }
+            
+            function startTimers() {
+                setInterval(() => {
+                    const now = Date.now();
+                    let uiNeedsUpdate = false;
+
+                    for (const id in resourcesProxy) {
+                        const resource = resourcesProxy[id];
+                        if (!resource.nextTime) continue;
+                        
+                        if (now >= resource.nextTime.getTime()) {
+                            if (!resource.mature) {
+                                resource.mature = true;
+                                uiNeedsUpdate = true; // Flag for full UI update
+                                if (alertsEnabled) {
+                                    playAlertSound();
+                                    sendNotification(`${resource.name} 已成熟!`, { body: `现在是收获${resource.name}的时候了。`, vibrate: [200, 100, 200] });
+                                }
+                            }
+                        } else if (resource.mature) {
+                            // If it was mature but time somehow went backwards or nextTime was reset, revert mature state
+                            resource.mature = false;
+                            uiNeedsUpdate = true;
+                        }
+                    }
+                    
+                    if (uiNeedsUpdate || Object.keys(resourcesProxy).length === 0) {
+                        updateUI(); // Full UI update if state changed or grid is empty
+                    } else {
+                        // Only update timer text for active resources
+                        for (const id in resourcesProxy) {
+                            const cardElement = resourceGrid.querySelector(`[data-id="${id}"]`);
+                            if (cardElement && !resourcesProxy[id].mature) {
+                                updateTimerDisplay(cardElement, resourcesProxy[id]);
+                            }
+                        }
+                    }
+                }, UPDATE_INTERVAL_MS);
+            }
+
+            function updateTimerDisplay(cardElement, resource) {
+                const now = Date.now();
+                const timerEl = cardElement.querySelector('.timer');
+                
+                if (!resource.nextTime) {
+                    timerEl.textContent = '未开始';
+                    return;
+                }
+
+                if (resource.mature) {
+                    timerEl.textContent = '已成熟!';
+                } else {
+                    const diffMs = resource.nextTime.getTime() - now;
+                    const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+                    const mins = Math.floor(diffSec / 60);
+                    const secs = diffSec % 60;
+                    timerEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                }
+            }
+            
+            function renderResourceCard(resourceId, resource) {
+                let cardElement = resourceGrid.querySelector(`[data-id="${resourceId}"]`);
+                const now = Date.now();
+                let timerHTML = '';
+                let matureClass = '';
+
+                if (resource.nextTime) {
+                    if (resource.mature) {
+                        timerHTML = '已成熟!';
+                        matureClass = 'mature';
+                    } else {
+                        const diffMs = resource.nextTime.getTime() - now;
+                        const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+                        const mins = Math.floor(diffSec / 60);
+                        const secs = diffSec % 60;
+                        timerHTML = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                    }
+                } else {
+                    timerHTML = '未开始';
+                }
+
+                if (cardElement) {
+                    cardElement.className = `resource-card ${matureClass}`;
+                    cardElement.querySelector('.resource-name').textContent = resource.name;
+                    cardElement.querySelector('.timer').textContent = timerHTML;
+                } else {
+                    const newCardHTML = `
+                        <div class="resource-card ${matureClass}" data-id="${resourceId}">
+                            <div class="resource-name">${resource.name}</div>
+                            <div class="timer">${timerHTML}</div>
+                            <button class="btn-harvest">收获${resource.name}</button>
+                        </div>
+                    `;
+                    resourceGrid.insertAdjacentHTML('beforeend', newCardHTML);
+                }
+            }
+            
+            function updateUI() {
+                if (Object.keys(resourcesProxy).length === 0) {
+                    resourceGrid.innerHTML = '<div class="no-resources">没有作物，请添加农作物</div>';
+                    return;
+                }
+
+                Array.from(resourceGrid.children).forEach(child => {
+                    if (child.classList.contains('resource-card') && !resourcesProxy[child.dataset.id]) {
+                        child.remove();
+                    }
+                });
+
+                for (const id in resourcesProxy) {
+                    renderResourceCard(id, resourcesProxy[id]);
+                }
+            }
+            
+            function resetTimer(resourceId) {
+                if (resourcesProxy[resourceId]) {
+                    const now = Date.now();
+                    resourcesProxy[resourceId].nextTime = new Date(now + resourcesProxy[resourceId].interval * 1000);
+                    resourcesProxy[resourceId].mature = false;
+                    statusEl.textContent = `状态: ${resourcesProxy[resourceId].name}已重置`;
+                    // Proxy handles updateUI and saveConfig
+                }
+            }
+            
+            function showDialog(dialog) {
+                closeAllDialogs();
+                dialog.classList.add('active');
+            }
+            
+            function closeAllDialogs() {
+                document.querySelectorAll('.dialog').forEach(d => d.classList.remove('active'));
+            }
+            
+            // showRemoveDialog now accepts an optional preSelectedId
+            function showRemoveDialog(preSelectedId = null) {
+                const currentResourceIds = Object.keys(resourcesProxy);
+                if (currentResourceIds.length === 0) {
+                    statusEl.textContent = '状态: 没有可删除的作物';
+                    return;
+                }
+                
+                cropSelect.innerHTML = '';
+                currentResourceIds.forEach(id => {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = resourcesProxy[id].name;
+                    cropSelect.appendChild(option);
+                });
+
+                if (preSelectedId && resourcesProxy[preSelectedId]) {
+                    cropSelect.value = preSelectedId; // Pre-select the item
+                }
+                
+                showDialog(removeDialog);
+            }
+            
+            function addCrop() {
+                const name = document.getElementById('crop-name').value.trim();
+                const intervalMinutes = parseInt(cropIntervalInput.value); // Use value from number input
+                const intervalSeconds = intervalMinutes * 60;
+                
+                if (!name) {
+                    statusEl.textContent = '状态: 请输入作物名称';
+                    return;
+                }
+                
+                if (isNaN(intervalSeconds) || intervalSeconds <= 0) {
+                    statusEl.textContent = '状态: 无效的时间间隔，请输入正整数分钟数';
+                    return;
+                }
+                
+                const id = `crop_${crypto.randomUUID()}`; // Use crypto.randomUUID for unique IDs
+                
+                resourcesProxy[id] = {
+                    name: name,
+                    interval: intervalSeconds,
+                    nextTime: new Date(Date.now() + intervalSeconds * 1000),
+                    mature: false
+                };
+                
+                closeAllDialogs();
+                statusEl.textContent = `状态: 成功添加 ${name}`;
+            }
+            
+            function confirmRemove() {
+                const selectedId = cropSelect.value;
+                if (selectedId && resourcesProxy[selectedId]) {
+                    const name = resourcesProxy[selectedId].name;
+                    delete resourcesProxy[selectedId];
+                    closeAllDialogs();
+                    statusEl.textContent = `状态: 成功删除 ${name}`;
+                }
+            }
+            
+            function toggleAlerts() {
+                alertsEnabled = !alertsEnabled;
+                updateAlertButtonState();
+                saveConfig();
+                if (alertsEnabled) {
+                    playAlertSound();
+                }
+            }
+
+            function updateAlertButtonState() {
+                const btnAlert = document.getElementById('btn-alert');
+                btnAlert.classList.toggle('enabled', alertsEnabled);
+                btnAlert.classList.toggle('disabled', !alertsEnabled);
+                alertStatusSpan.textContent = alertsEnabled ? '(开)' : '(关)';
+            }
+            
+            function saveConfig() {
+                const config = {
+                    alertsEnabled: alertsEnabled,
+                    resources: Object.fromEntries(
+                        Object.entries(resourcesProxy).map(([id, resource]) => [
+                            id,
+                            {
+                                ...resource,
+                                nextTime: resource.nextTime ? resource.nextTime.toISOString() : null // Save as ISO string
+                            }
+                        ])
+                    )
+                };
+                
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+                    statusEl.textContent = '状态: 配置已保存';
+                    return true;
+                } catch (e) {
+                    console.error('保存配置错误', e);
+                    statusEl.textContent = '状态: 保存失败';
+                    return false;
+                }
+            }
+            
+            function playAlertSound() {
+                if (typeof AudioContext === 'undefined' && typeof webkitAudioContext === 'undefined') {
+                    console.log('浏览器不支持 AudioContext，无法播放提示音。');
+                    return;
+                }
+                try {
+                    const context = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = context.createOscillator();
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(SOUND_FREQUENCY, context.currentTime);
+                    
+                    const gainNode = context.createGain();
+                    gainNode.gain.setValueAtTime(0.5, context.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, context.currentTime + SOUND_DURATION);
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(context.destination);
+                    
+                    oscillator.start();
+                    oscillator.stop(context.currentTime + SOUND_DURATION);
+                } catch (e) {
+                    console.error('播放提示音错误', e);
+                    statusEl.textContent = '状态: 提示音播放失败';
+                }
+            }
+
+            function requestNotificationPermission() {
+                if ('Notification' in window) {
+                    if (Notification.permission === 'default') {
+                        Notification.requestPermission().then(permission => {
+                            if (permission === 'granted') {
+                                console.log('通知权限已授予');
+                                statusEl.textContent = '状态: 已获得通知权限';
+                            } else {
+                                console.log('通知权限被拒绝');
+                                statusEl.textContent = '状态: 未获得通知权限';
+                            }
+                        });
+                    }
+                } else {
+                    console.warn('浏览器不支持 Notifications API。');
+                }
+            }
+
+            function sendNotification(title, options) {
+                if (alertsEnabled && 'Notification' in window && Notification.permission === 'granted') {
+                    // Use a tag to prevent multiple notifications from the same source stacking up
+                    // and instead update an existing one if it has the same tag.
+                    new Notification(title, { tag: 'crop-timer-alert', ...options });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
