@@ -3,23 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>农作物计时器 - iPhone版</title>
+    <title>农作物计时器</title>
+
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./icons/icon-192x192.png">
+    <meta name="theme-color" content="#34495e"/> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujlZHq/z1z7eN3u3jG1vQy4tKxT2H1w0y2f5+0f5z2F5k5j5u5u5g5c5v5w5x5y5z5A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
     <style>
         /* Constants */
         :root {
-            --bg-color-dark: #1a1a1a;
-            --bg-color-medium: rgba(30, 30, 30, 0.95);
-            --card-bg-color: rgba(45, 45, 45, 0.9);
-            --text-color-light: #f0f0f0;
-            --text-color-medium: #888;
-            --primary-color: #4CAF50; /* Green */
-            --accent-color: #3498db; /* Blue */
-            --danger-color: #e74c3c; /* Red */
-            --warning-color: #f39c12; /* Orange */
-            --purple-color: #9b59b6; /* Purple */
-            --border-color: #333;
-            --border-color-card: #444;
-            --dialog-bg: rgba(35, 35, 35, 0.98);
+            --bg-color-dark: #2c3e50; /* 深蓝色 */
+            --bg-color-medium: rgba(44, 62, 80, 0.95);
+            --card-bg-color: rgba(52, 73, 94, 0.9); /* 稍浅的蓝色 */
+            --text-color-light: #ecf0f1; /* 浅灰色 */
+            --text-color-medium: #bdc3c7; /* 中灰色 */
+            --primary-color: #27ae60; /* 绿色，用于添加/收获 */
+            --accent-color: #3498db; /* 蓝色，用于信息 */
+            --danger-color: #e74c3c; /* 红色，用于删除/成熟提醒 */
+            --warning-color: #f39c12; /* 橙色，用于警告 */
+            --purple-color: #9b59b6; /* 紫色 */
+            --border-color: rgba(255, 255, 255, 0.1);
+            --border-color-card: rgba(255, 255, 255, 0.15);
+            --dialog-bg: rgba(44, 62, 80, 0.98); /* 对话框背景 */
+
+            /* Gradient for subtle effect */
+            --bg-gradient: linear-gradient(to bottom, #2c3e50, #1a2c3a);
         }
 
         * {
@@ -30,22 +38,22 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
-        
+        
         body {
-            background-color: var(--bg-color-dark);
+            background: var(--bg-gradient); /* 使用渐变背景 */
             color: var(--text-color-light);
             min-height: 100vh;
             padding-bottom: env(safe-area-inset-bottom);
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden;
         }
-        
+        
         .container {
             max-width: 100%;
             margin: 0 auto;
             padding: 15px;
         }
-        
+        
         .header {
             text-align: center;
             padding: 20px 0;
@@ -53,23 +61,24 @@
             top: 0;
             background: var(--bg-color-medium);
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px); /* For Safari */
+            -webkit-backdrop-filter: blur(10px);
             z-index: 10;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid var(--border-color);
         }
-        
+        
         h1 {
             font-size: 1.8rem;
             margin-bottom: 5px;
             color: var(--primary-color);
             letter-spacing: 0.5px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3); /* 标题阴影 */
         }
-        
+        
         .subtitle {
             color: var(--text-color-medium);
             font-size: 0.9rem;
         }
-        
+        
         .status-bar {
             background: var(--card-bg-color);
             padding: 12px 15px;
@@ -78,81 +87,93 @@
             font-size: 0.95rem;
             text-align: center;
             border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2); /* 状态栏阴影 */
         }
-        
+        
         .resource-grid {
             display: grid;
-            /* Adaptive columns: 1 column on small screens, 2 columns on medium, up to 3 on larger */
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
             gap: 15px;
             margin-top: 15px;
         }
-        
+        
         .resource-card {
             background: var(--card-bg-color);
-            border-radius: 16px;
+            border-radius: 18px; /* 增加圆角 */
             padding: 20px 15px;
             text-align: center;
             position: relative;
             overflow: hidden;
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px); /* For Safari */
+            -webkit-backdrop-filter: blur(10px);
             transition: all 0.3s ease;
             border: 1px solid var(--border-color-card);
-            user-select: none; /* Prevent text selection on long press */
+            user-select: none;
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
+            box-shadow: 0 6px 10px rgba(0,0,0,0.3); /* 卡片阴影 */
         }
-        
+        
         .resource-card.mature {
-            animation: pulse 1.5s infinite;
+            animation: pulse-border 1.5s infinite, flash-bg 0.5s forwards; /* 边框脉冲和背景闪烁 */
             border-color: var(--danger-color);
         }
-        
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
-            70% { box-shadow: 0 0 0 8px rgba(231, 76, 60, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); border-color: var(--danger-color); }
+            70% { box-shadow: 0 0 0 8px rgba(231, 76, 60, 0); border-color: var(--danger-color); }
+            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); border-color: var(--danger-color); }
         }
-        
+        
+        @keyframes flash-bg {
+            0% { background: var(--card-bg-color); }
+            50% { background: rgba(231, 76, 60, 0.3); } /* 红色半透明背景 */
+            100% { background: var(--card-bg-color); }
+        }
+        
         .resource-name {
             font-weight: bold;
-            font-size: 1.1rem;
+            font-size: 1.2rem; /* 字体增大 */
             margin-bottom: 10px;
-            color: var(--accent-color);
+            color: var(--accent-color); /* 蓝色名称 */
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
-        
+        
         .timer {
-            font-size: 1.8rem;
+            font-size: 2.2rem; /* 计时器数字更大 */
             font-weight: bold;
             margin: 15px 0;
             font-variant-numeric: tabular-nums;
             padding: 8px 0;
+            color: var(--text-color-light); /* 默认白色 */
         }
-        
+        
         .mature .timer {
-            color: var(--danger-color);
+            color: var(--danger-color); /* 成熟时红色 */
+            text-shadow: 0 0 8px var(--danger-color); /* 红色发光效果 */
         }
-        
+        
         .btn-harvest {
             background: var(--primary-color);
             color: white;
             border: none;
-            padding: 10px 15px;
-            border-radius: 12px;
-            font-size: 0.95rem;
+            padding: 12px 15px; /* 增加内边距 */
+            border-radius: 14px; /* 增加圆角 */
+            font-size: 1rem;
             font-weight: 500;
             cursor: pointer;
             width: 100%;
-            transition: background 0.2s, transform 0.1s;
+            transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2); /* 按钮阴影 */
         }
-        
+        
         .btn-harvest:active {
-            background: #219d54;
+            background: #219d54; /* 点击时深色 */
             transform: scale(0.98);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3); /* 点击时阴影缩小 */
         }
-        
+        
         .controls {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -160,7 +181,7 @@
             margin-top: 25px;
             padding-bottom: calc(25px + env(safe-area-inset-bottom));
         }
-        
+        
         .control-btn {
             padding: 16px;
             border-radius: 14px;
@@ -170,37 +191,48 @@
             cursor: pointer;
             transition: all 0.2s;
             color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2); /* 按钮阴影 */
+            display: flex; /* 启用flexbox */
+            align-items: center; /* 垂直居中 */
+            justify-content: center; /* 水平居中 */
         }
-        
+        
+        .control-btn i {
+            margin-right: 8px; /* 图标和文字的间距 */
+        }
+
         .control-btn:active {
             transform: scale(0.95);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-        
+        
         .btn-add {
             background: var(--primary-color);
             grid-column: span 2;
         }
-        
+        
         .btn-remove {
             background: var(--danger-color);
         }
-        
+        
         .btn-alert {
             background: var(--warning-color);
         }
-        
+        
         .btn-alert.enabled {
             background: var(--warning-color);
+            color: #2c3e50; /* 开启时文字深色 */
         }
 
         .btn-alert.disabled {
-            background: #777;
+            background: #7f8c8d; /* 关闭时灰色 */
+            color: #ecf0f1;
         }
-        
+        
         .btn-save {
             background: var(--accent-color);
         }
-        
+        
         /* Dialog styles */
         .dialog {
             position: fixed;
@@ -222,42 +254,44 @@
             display: flex;
             opacity: 1;
         }
-        
+        
         .dialog-content {
             background: var(--dialog-bg);
             width: 100%;
             max-width: 400px;
-            border-radius: 18px;
+            border-radius: 20px; /* 更大圆角 */
             overflow: hidden;
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px); /* For Safari */
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--border-color-card);
             transform: translateY(20px);
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, opacity 0.3s ease; /* 动画更流畅 */
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
         }
 
         .dialog.active .dialog-content {
             transform: translateY(0);
+            opacity: 1;
         }
-        
+        
         .dialog-header {
             padding: 22px;
             text-align: center;
             font-weight: bold;
-            font-size: 1.3rem;
+            font-size: 1.4rem; /* 标题字号更大 */
             border-bottom: 1px solid var(--border-color);
             color: var(--primary-color);
         }
-        
+        
         .dialog-body {
             padding: 0 22px 22px;
         }
-        
+        
         .dialog-footer {
             display: flex;
             border-top: 1px solid var(--border-color);
         }
-        
+        
         .dialog-btn {
             flex: 1;
             padding: 18px;
@@ -269,29 +303,29 @@
             cursor: pointer;
             transition: background 0.2s, transform 0.1s;
         }
-        
+        
         .dialog-btn:active {
             background: rgba(255, 255, 255, 0.1);
             transform: scale(0.98);
         }
-        
+        
         .dialog-btn.cancel {
             color: var(--text-color-medium);
             border-right: 1px solid var(--border-color);
         }
-        
+        
         .input-group {
             margin-top: 22px;
             margin-bottom: 0;
         }
-        
+        
         .input-label {
             display: block;
             margin-bottom: 12px;
             font-size: 1rem;
             color: var(--text-color-light);
         }
-        
+        
         .input-field {
             width: 100%;
             padding: 14px 18px;
@@ -303,20 +337,18 @@
             appearance: none;
             -webkit-appearance: none;
             -moz-appearance: none;
-            outline: none; /* Remove blue outline on focus */
+            outline: none;
         }
 
         .input-field:focus {
-            border-color: var(--accent-color); /* Highlight on focus */
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.5); /* Blue glow */
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.5);
         }
 
         .input-field::placeholder {
             color: rgba(255,255,255,0.4);
         }
-        
-        /* Removed range slider specific styles */
-        
+        
         .interval-display {
             text-align: center;
             font-size: 1.1rem;
@@ -324,7 +356,7 @@
             color: var(--accent-color);
             font-weight: 500;
         }
-        
+        
         .no-resources {
             grid-column: 1 / -1;
             text-align: center;
@@ -332,13 +364,13 @@
             font-size: 1.1rem;
             color: var(--text-color-medium);
         }
-        
+        
         /* Mobile optimization */
         @media (max-width: 480px) {
             .resource-grid {
                 grid-template-columns: 1fr; /* Single column on small phones */
             }
-            
+            
             .controls {
                 grid-template-columns: 1fr;
             }
@@ -365,21 +397,21 @@
             <h1>农作物计时器</h1>
             <div class="subtitle">iPhone专版</div>
         </div>
-        
+        
         <div class="status-bar" id="status">状态: 已启动</div>
-        
+        
         <div class="resource-grid" id="resource-grid">
             <div class="no-resources">没有作物，请添加农作物</div>
         </div>
-        
+        
         <div class="controls">
-            <button class="control-btn btn-add" id="btn-add">添加作物</button>
-            <button class="control-btn btn-remove" id="btn-remove">删除作物</button>
-            <button class="control-btn btn-alert" id="btn-alert">🔔 提示音 <span id="alert-status">(开)</span></button>
-            <button class="control-btn btn-save" id="btn-save">保存状态</button>
+            <button class="control-btn btn-add" id="btn-add"><i class="fas fa-plus-circle"></i> 添加作物</button>
+            <button class="control-btn btn-remove" id="btn-remove"><i class="fas fa-trash-alt"></i> 删除作物</button>
+            <button class="control-btn btn-alert" id="btn-alert"><i class="fas fa-bell"></i> 提示音 <span id="alert-status">(开)</span></button>
+            <button class="control-btn btn-save" id="btn-save"><i class="fas fa-save"></i> 保存状态</button>
         </div>
     </div>
-    
+    
     <div class="dialog" id="add-dialog">
         <div class="dialog-content">
             <div class="dialog-header">添加新作物</div>
@@ -388,7 +420,7 @@
                     <label for="crop-name" class="input-label">作物名称:</label>
                     <input type="text" id="crop-name" class="input-field" placeholder="例如: 樱桃番茄">
                 </div>
-                
+                
                 <div class="input-group">
                     <label for="crop-interval" class="input-label">生长周期 (分钟):</label>
                     <input type="number" id="crop-interval" class="input-field" min="1" max="1440" value="60" placeholder="请输入分钟数">
@@ -396,12 +428,12 @@
                 </div>
             </div>
             <div class="dialog-footer">
-                <button class="dialog-btn cancel">取消</button>
-                <button class="dialog-btn" id="confirm-add">确定</button>
+                <button class="dialog-btn cancel"><i class="fas fa-times"></i> 取消</button>
+                <button class="dialog-btn" id="confirm-add"><i class="fas fa-check"></i> 确定</button>
             </div>
         </div>
     </div>
-    
+    
     <div class="dialog" id="remove-dialog">
         <div class="dialog-content">
             <div class="dialog-header">删除作物</div>
@@ -413,12 +445,12 @@
                 </div>
             </div>
             <div class="dialog-footer">
-                <button class="dialog-btn cancel">取消</button>
-                <button class="dialog-btn" id="confirm-remove">确定</button>
+                <button class="dialog-btn cancel"><i class="fas fa-times"></i> 取消</button>
+                <button class="dialog-btn" id="confirm-remove"><i class="fas fa-trash-alt"></i> 确定</button>
             </div>
         </div>
     </div>
-    
+    
     <script>
         'use strict';
 
@@ -481,18 +513,18 @@
                 intervalDisplay.textContent = `${DEFAULT_INTERVAL_MINS} 分钟`;
                 showDialog(addDialog);
             });
-            
+            
             document.getElementById('btn-remove').addEventListener('click', showRemoveDialog);
             document.getElementById('btn-alert').addEventListener('click', toggleAlerts);
             document.getElementById('btn-save').addEventListener('click', saveConfig);
-            
+            
             document.getElementById('confirm-add').addEventListener('click', addCrop);
             document.getElementById('confirm-remove').addEventListener('click', confirmRemove);
-            
+            
             document.querySelectorAll('.dialog-btn.cancel').forEach(btn => {
                 btn.addEventListener('click', () => closeAllDialogs());
             });
-            
+            
             // For number input, update display when value changes
             cropIntervalInput.addEventListener('input', () => {
                 intervalDisplay.textContent = `${cropIntervalInput.value} 分钟`;
@@ -558,7 +590,7 @@
                         const config = JSON.parse(savedConfig);
                         Object.assign(resourcesProxy, config.resources || {});
                         alertsEnabled = config.alertsEnabled !== undefined ? config.alertsEnabled : true;
-                        
+                        
                         for (const id in resourcesProxy) {
                             if (resourcesProxy[id].nextTime) {
                                 resourcesProxy[id].nextTime = new Date(resourcesProxy[id].nextTime);
@@ -595,7 +627,7 @@
                 }
                 // Proxy setter already calls saveConfig and updateUI
             }
-            
+            
             function startTimers() {
                 setInterval(() => {
                     const now = Date.now();
@@ -604,7 +636,7 @@
                     for (const id in resourcesProxy) {
                         const resource = resourcesProxy[id];
                         if (!resource.nextTime) continue;
-                        
+                        
                         if (now >= resource.nextTime.getTime()) {
                             if (!resource.mature) {
                                 resource.mature = true;
@@ -620,7 +652,7 @@
                             uiNeedsUpdate = true;
                         }
                     }
-                    
+                    
                     if (uiNeedsUpdate || Object.keys(resourcesProxy).length === 0) {
                         updateUI(); // Full UI update if state changed or grid is empty
                     } else {
@@ -638,7 +670,7 @@
             function updateTimerDisplay(cardElement, resource) {
                 const now = Date.now();
                 const timerEl = cardElement.querySelector('.timer');
-                
+                
                 if (!resource.nextTime) {
                     timerEl.textContent = '未开始';
                     return;
@@ -654,7 +686,7 @@
                     timerEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
                 }
             }
-            
+            
             function renderResourceCard(resourceId, resource) {
                 let cardElement = resourceGrid.querySelector(`[data-id="${resourceId}"]`);
                 const now = Date.now();
@@ -691,24 +723,26 @@
                     resourceGrid.insertAdjacentHTML('beforeend', newCardHTML);
                 }
             }
-            
+            
             function updateUI() {
                 if (Object.keys(resourcesProxy).length === 0) {
                     resourceGrid.innerHTML = '<div class="no-resources">没有作物，请添加农作物</div>';
                     return;
                 }
 
+                // Remove cards that no longer exist in resourcesProxy
                 Array.from(resourceGrid.children).forEach(child => {
                     if (child.classList.contains('resource-card') && !resourcesProxy[child.dataset.id]) {
                         child.remove();
                     }
                 });
 
+                // Render or update existing cards
                 for (const id in resourcesProxy) {
                     renderResourceCard(id, resourcesProxy[id]);
                 }
             }
-            
+            
             function resetTimer(resourceId) {
                 if (resourcesProxy[resourceId]) {
                     const now = Date.now();
@@ -718,16 +752,16 @@
                     // Proxy handles updateUI and saveConfig
                 }
             }
-            
+            
             function showDialog(dialog) {
                 closeAllDialogs();
                 dialog.classList.add('active');
             }
-            
+            
             function closeAllDialogs() {
                 document.querySelectorAll('.dialog').forEach(d => d.classList.remove('active'));
             }
-            
+            
             // showRemoveDialog now accepts an optional preSelectedId
             function showRemoveDialog(preSelectedId = null) {
                 const currentResourceIds = Object.keys(resourcesProxy);
@@ -735,7 +769,7 @@
                     statusEl.textContent = '状态: 没有可删除的作物';
                     return;
                 }
-                
+                
                 cropSelect.innerHTML = '';
                 currentResourceIds.forEach(id => {
                     const option = document.createElement('option');
@@ -747,38 +781,38 @@
                 if (preSelectedId && resourcesProxy[preSelectedId]) {
                     cropSelect.value = preSelectedId; // Pre-select the item
                 }
-                
+                
                 showDialog(removeDialog);
             }
-            
+            
             function addCrop() {
                 const name = document.getElementById('crop-name').value.trim();
                 const intervalMinutes = parseInt(cropIntervalInput.value); // Use value from number input
                 const intervalSeconds = intervalMinutes * 60;
-                
+                
                 if (!name) {
                     statusEl.textContent = '状态: 请输入作物名称';
                     return;
                 }
-                
+                
                 if (isNaN(intervalSeconds) || intervalSeconds <= 0) {
                     statusEl.textContent = '状态: 无效的时间间隔，请输入正整数分钟数';
                     return;
                 }
-                
+                
                 const id = `crop_${crypto.randomUUID()}`; // Use crypto.randomUUID for unique IDs
-                
+                
                 resourcesProxy[id] = {
                     name: name,
                     interval: intervalSeconds,
                     nextTime: new Date(Date.now() + intervalSeconds * 1000),
                     mature: false
                 };
-                
+                
                 closeAllDialogs();
                 statusEl.textContent = `状态: 成功添加 ${name}`;
             }
-            
+            
             function confirmRemove() {
                 const selectedId = cropSelect.value;
                 if (selectedId && resourcesProxy[selectedId]) {
@@ -788,7 +822,7 @@
                     statusEl.textContent = `状态: 成功删除 ${name}`;
                 }
             }
-            
+            
             function toggleAlerts() {
                 alertsEnabled = !alertsEnabled;
                 updateAlertButtonState();
@@ -803,8 +837,19 @@
                 btnAlert.classList.toggle('enabled', alertsEnabled);
                 btnAlert.classList.toggle('disabled', !alertsEnabled);
                 alertStatusSpan.textContent = alertsEnabled ? '(开)' : '(关)';
+                // Update icon based on state
+                const bellIcon = btnAlert.querySelector('.fas');
+                if (bellIcon) {
+                    if (alertsEnabled) {
+                        bellIcon.classList.remove('fa-bell-slash');
+                        bellIcon.classList.add('fa-bell');
+                    } else {
+                        bellIcon.classList.remove('fa-bell');
+                        bellIcon.classList.add('fa-bell-slash');
+                    }
+                }
             }
-            
+            
             function saveConfig() {
                 const config = {
                     alertsEnabled: alertsEnabled,
@@ -818,7 +863,7 @@
                         ])
                     )
                 };
-                
+                
                 try {
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
                     statusEl.textContent = '状态: 配置已保存';
@@ -829,7 +874,7 @@
                     return false;
                 }
             }
-            
+            
             function playAlertSound() {
                 if (typeof AudioContext === 'undefined' && typeof webkitAudioContext === 'undefined') {
                     console.log('浏览器不支持 AudioContext，无法播放提示音。');
@@ -840,14 +885,14 @@
                     const oscillator = context.createOscillator();
                     oscillator.type = 'sine';
                     oscillator.frequency.setValueAtTime(SOUND_FREQUENCY, context.currentTime);
-                    
+                    
                     const gainNode = context.createGain();
                     gainNode.gain.setValueAtTime(0.5, context.currentTime);
                     gainNode.gain.exponentialRampToValueAtTime(0.001, context.currentTime + SOUND_DURATION);
-                    
+                    
                     oscillator.connect(gainNode);
                     gainNode.connect(context.destination);
-                    
+                    
                     oscillator.start();
                     oscillator.stop(context.currentTime + SOUND_DURATION);
                 } catch (e) {
@@ -876,8 +921,6 @@
 
             function sendNotification(title, options) {
                 if (alertsEnabled && 'Notification' in window && Notification.permission === 'granted') {
-                    // Use a tag to prevent multiple notifications from the same source stacking up
-                    // and instead update an existing one if it has the same tag.
                     new Notification(title, { tag: 'crop-timer-alert', ...options });
                 }
             }
