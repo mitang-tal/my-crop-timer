@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>农作物计时器 - iPhone版（优化版）</title>
+    <title>农作物计时器 - iPhone版</title>
     <style>
         * {
             margin: 0;
@@ -159,7 +159,7 @@
             background: #f39c12;
         }
         
-        .btn-debug {
+        .btn-stats {
             background: #9b59b6;
         }
         
@@ -201,6 +201,8 @@
         
         .dialog-body {
             padding: 0 22px 22px;
+            max-height: 60vh;
+            overflow-y: auto;
         }
         
         .dialog-footer {
@@ -274,6 +276,40 @@
             color: #777;
         }
         
+        /* 统计表格样式 */
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .stats-table th {
+            background-color: rgba(50, 50, 50, 0.8);
+            padding: 12px 10px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+        }
+        
+        .stats-table td {
+            padding: 10px;
+            border-bottom: 1px solid #444;
+        }
+        
+        .stats-table tr:nth-child(even) {
+            background-color: rgba(50, 50, 50, 0.4);
+        }
+        
+        .stat-label {
+            color: #ddd;
+        }
+        
+        .stat-value {
+            color: #27ae60;
+            font-weight: 600;
+        }
+        
         /* 移动设备优化 */
         @media (max-width: 380px) {
             .resource-grid {
@@ -282,6 +318,10 @@
             
             .controls {
                 grid-template-columns: 1fr;
+            }
+            
+            .control-btn {
+                grid-column: span 2;
             }
         }
     </style>
@@ -302,7 +342,9 @@
         <div class="controls">
             <button class="control-btn btn-add" id="btn-add">添加作物</button>
             <button class="control-btn btn-remove" id="btn-remove">删除作物</button>
-            <button class="control-btn btn-alert" id="btn-alert">🔔 提示音</button>
+            <button class="control-btn btn-alert" id="btn-alert">🔔提示音</button>
+            <!-- 新添加的统计按钮 -->
+            <button class="control-btn btn-stats" id="btn-stats">📊 查看统计</button>
             <button class="control-btn btn-save" id="btn-save">保存状态</button>
         </div>
     </div>
@@ -358,6 +400,19 @@
         </div>
     </div>
     
+    <!-- 统计对话框 -->
+    <div class="dialog" id="stats-dialog">
+        <div class="dialog-content">
+            <div class="dialog-header">收获统计</div>
+            <div class="dialog-body" id="stats-content">
+                <div class="no-stats">没有统计数据</div>
+            </div>
+            <div class="dialog-footer">
+                <button class="dialog-btn cancel">关闭</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // 初始化存储
@@ -370,6 +425,8 @@
             const statusEl = document.getElementById('status');
             const cropIntervalInput = document.getElementById('crop-interval');
             const cropSelect = document.getElementById('crop-select');
+            const statsDialog = document.getElementById('stats-dialog');
+            const statsContent = document.getElementById('stats-content');
             
             // 对话框
             const addDialog = document.getElementById('add-dialog');
@@ -389,8 +446,12 @@
             document.getElementById('btn-alert').addEventListener('click', toggleAlerts);
             document.getElementById('btn-save').addEventListener('click', saveConfig);
             
+            // 新添加的统计按钮事件
+            document.getElementById('btn-stats').addEventListener('click', showStatsDialog);
+            
             // 对话框按钮
             document.getElementById('confirm-add').addEventListener('click', addCrop);
+            document.getElementById('confirm-remove').addEventListener('click', confirmRemove);
             
             document.querySelectorAll('.dialog-btn.cancel').forEach(btn => {
                 btn.addEventListener('click', () => closeAllDialogs());
@@ -411,6 +472,11 @@
                             if (resources[id].nextTime) {
                                 resources[id].nextTime = new Date(resources[id].nextTime);
                             }
+                            
+                            // 添加收获次数统计（兼容旧数据）
+                            if (resources[id].harvestCount === undefined) {
+                                resources[id].harvestCount = 0;
+                            }
                         }
                         
                         updateUI();
@@ -420,11 +486,11 @@
                         statusEl.textContent = '状态: 配置加载失败';
                     }
                 } else {
-                    // 默认资源
+                    // 默认资源 - 添加收获次数字段
                     resources = {
-                        ice: { name: "冰块", interval: 180, nextTime: null },
-                        milk: { name: "牛奶", interval: 240, nextTime: null },
-                        sugarcane: { name: "甘蔗", interval: 900, nextTime: null }
+                        ice: { name: "冰块", interval: 180, nextTime: null, harvestCount: 0 },
+                        milk: { name: "牛奶", interval: 240, nextTime: null, harvestCount: 0 },
+                        sugarcane: { name: "甘蔗", interval: 900, nextTime: null, harvestCount: 0 }
                     };
                     
                     // 设置初始时间
@@ -521,15 +587,19 @@
                 }
             }
             
-            // 重置计时器
+            // 重置计时器（收获作物）
             function resetTimer(resourceId) {
                 if (resources[resourceId]) {
                     const now = new Date();
                     resources[resourceId].nextTime = new Date(now.getTime() + 
                         resources[resourceId].interval * 1000);
                     resources[resourceId].mature = false;
+                    
+                    // 增加收获次数
+                    resources[resourceId].harvestCount = (resources[resourceId].harvestCount || 0) + 1;
+                    
                     updateUI();
-                    statusEl.textContent = `状态: ${resources[resourceId].name}已重置`;
+                    statusEl.textContent = `状态: ${resources[resourceId].name}已重置 (收获${resources[resourceId].harvestCount}次)`;
                     saveConfig();
                 }
             }
@@ -563,6 +633,53 @@
                 showDialog(removeDialog);
             }
             
+            // 新添加的：显示统计对话框
+            function showStatsDialog() {
+                if (Object.keys(resources).length === 0) {
+                    statsContent.innerHTML = '<div class="no-stats">没有统计数据</div>';
+                    showDialog(statsDialog);
+                    return;
+                }
+                
+                let statsHTML = `
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>作物名称</th>
+                                <th>收获次数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                let totalHarvests = 0;
+                
+                for (const id in resources) {
+                    const resource = resources[id];
+                    statsHTML += `
+                        <tr>
+                            <td class="stat-label">${resource.name}</td>
+                            <td class="stat-value">${resource.harvestCount}</td>
+                        </tr>
+                    `;
+                    totalHarvests += resource.harvestCount;
+                }
+                
+                statsHTML += `
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td class="stat-label">总计</td>
+                                <td class="stat-value">${totalHarvests}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                `;
+                
+                statsContent.innerHTML = statsHTML;
+                showDialog(statsDialog);
+            }
+            
             // 添加新作物
             function addCrop() {
                 const name = document.getElementById('crop-name').value.trim();
@@ -593,7 +710,8 @@
                 resources[id] = {
                     name: name,
                     interval: interval,
-                    nextTime: new Date(new Date().getTime() + interval * 1000)
+                    nextTime: new Date(new Date().getTime() + interval * 1000),
+                    harvestCount: 0 // 初始化收获次数
                 };
                 
                 closeAllDialogs();
@@ -644,6 +762,8 @@
             
             // 播放提示音
             function playAlertSound() {
+                if (!alertsEnabled) return;
+                
                 try {
                     // 创建简单的提示音
                     const context = new (window.AudioContext || window.webkitAudioContext)();
@@ -663,9 +783,6 @@
                     console.log('无法播放提示音', e);
                 }
             }
-            
-            // 设置删除确认按钮
-            document.getElementById('confirm-remove').addEventListener('click', confirmRemove);
         });
     </script>
 </body>
